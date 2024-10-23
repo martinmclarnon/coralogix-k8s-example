@@ -1,0 +1,68 @@
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+resources:
+  - repo: self
+
+variables:
+  # ========================================================================
+  #                           Mandatory
+  # ========================================================================
+
+  tag: '$(Build.BuildId)'
+  vmImageName: 'ubuntu-latest'
+  varIaCWorkingDirectory: '$(Build.SourcesDirectory)/iac/tf-coralogix-demo-below-the-line-aks-acr/'
+
+  # ========================================================================
+  #            Infrastructure as Code variables - Setup stage
+  # ========================================================================
+
+  # mfo-sandbox-subscription(6fe5a310-38ec-4459-ae40-b376726e4c8f)
+
+  varBackendServiceArm: 'mfo-sandbox-subscription(6fe5a310-38ec-4459-ae40-b376726e4c8f)'
+  varBackendAzureRmResourceGroupName: '${varBackendAzureRmResourceGroupNamePipelineVariable}'
+  varBackendAzureRmStorageAccountName: '${varBackendAzureRmStorageAccountNamePipelineVariable}'
+  varBackendAzureRmContainerName: '${varBackendAzureRmContainerNamePipelineVariable}'
+  varBackendAzureRmKey: '${varBackendAzureRmKeyPipelineVariable}'
+
+stages:
+  - stage: Setup
+    displayName: Infrastructure as Code
+    jobs:
+      - job: Init
+        displayName: Create RG, AKS and ACR.
+        pool:
+          vmImage: $(vmImageName)
+        steps:
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform: Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              commandOptions: '--upgrade'
+              workingDirectory: $(varIaCWorkingDirectory)
+              backendServiceArm: $(varBackendServiceArm)
+              backendAzureRmResourceGroupName: $(varBackendAzureRmResourceGroupName)
+              backendAzureRmStorageAccountName: $(varBackendAzureRmStorageAccountName)
+              backendAzureRmContainerName: $(varBackendAzureRmContainerName)
+              backendAzureRmKey: $(varBackendAzureRmKey)
+              tags: |
+                $(tag)
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform: Plan'
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              workingDirectory: $(varIaCWorkingDirectory)
+              commandOptions: '-out main.tfplan'
+              environmentServiceNameAzureRM: $(varBackendServiceArm)
+              tags: |
+                $(tag)
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform: Apply'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              workingDirectory: $(varIaCWorkingDirectory)
+              commandOptions: 'main.tfplan'
+              environmentServiceNameAzureRM: $(varBackendServiceArm)
+              tags: |
+                $(tag)

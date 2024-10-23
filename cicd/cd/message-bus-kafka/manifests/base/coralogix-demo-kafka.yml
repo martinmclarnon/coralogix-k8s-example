@@ -1,0 +1,68 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coralogix-demo-kafka
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+data:
+  KAFKA_BROKER_ID: "OVERLOADED_DURING_KUSTOMIZATION"
+  KAFKA_ZOOKEEPER_CONNECT: "OVERLOADED_DURING_KUSTOMIZATION"
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "OVERLOADED_DURING_KUSTOMIZATION"
+  KAFKA_ADVERTISED_LISTENERS: "OVERLOADED_DURING_KUSTOMIZATION"
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "OVERLOADED_DURING_KUSTOMIZATION"
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "OVERLOADED_DURING_KUSTOMIZATION"
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "OVERLOADED_DURING_KUSTOMIZATION"
+--- 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coralogix-demo-kafka
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coralogix-demo-kafka
+  template:
+    metadata:
+      labels:
+        app: coralogix-demo-kafka
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: type
+                operator: In
+                values:
+                - message-queue
+      containers:
+        - name: OVERLOADED_DURING_KUSTOMIZATION
+          image: OVERLOADED_DURING_KUSTOMIZATION
+          ports:
+            - containerPort: 9092
+          resources:
+            limits:
+              cpu: 250m # 1 CPU core = 1000m
+              memory: 512Mi # 256 megabytes, 512 megabytes, 768 megabytes, 1024 megabytes
+            requests:
+              cpu: 100m  # 0.75 CPU cores = 750m
+              memory: 64Mi  # 256 megabytes, 512 megabytes, 768 megabytes, 1024 megabytes
+          envFrom:
+            - configMapRef:
+                name: coralogix-demo-kafka
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coralogix-demo-kafka
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+spec:
+  selector:
+    app: coralogix-demo-kafka
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+  type: ClusterIP  

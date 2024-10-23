@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coralogix-demo-mongodb
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coralogix-demo-mongodb
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coralogix-demo-mongodb
+  template:
+    metadata:
+      labels:
+        app: coralogix-demo-mongodb
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: type
+                    operator: In
+                    values:
+                      - db
+      containers:
+        - name: OVERLOADED_DURING_KUSTOMIZATION
+          image: OVERLOADED_DURING_KUSTOMIZATION
+          ports:
+            - containerPort: 27017
+          resources:
+            limits:
+              cpu: "750m" # 1 CPU core = 1000m
+              memory: "2048Mi" # 256 megabytes, 512 megabytes, 768 megabytes, 1024 megabytes, 2048, 3072
+            requests:
+              cpu: "50m" # 0.75 CPU cores = 750m
+              memory: "512Mi" # 256 megabytes, 512 megabytes, 768 megabytes, 1024 megabytes
+          envFrom:
+            - configMapRef:
+                name: coralogix-demo-mongodb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coralogix-demo-mongodb
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+spec:
+  selector:
+    app: coralogix-demo-mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coralogix-demo-mongodb-external
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+spec:
+  selector:
+    app: coralogix-demo-mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: LoadBalancer

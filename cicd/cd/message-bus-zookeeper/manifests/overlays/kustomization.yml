@@ -1,0 +1,39 @@
+resources:
+  - ../base/
+
+patches:
+
+# coralogix-demo-zookeeper
+- target:
+    kind: ConfigMap
+    name: coralogix-demo-zookeeper
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@
+    - op: replace
+      path: /data/ZOOKEEPER_CLIENT_PORT
+      value: "2181"
+    - op: replace
+      path: /data/ZOOKEEPER_TICK_TIME
+      value: "2000"
+- target:
+    kind: Deployment
+    name: coralogix-demo-zookeeper
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@
+    - op: replace
+      path: /spec/template/spec/containers/0/image
+      value: "confluentinc/cp-zookeeper:7.0.1"
+    - op: replace
+      path: /spec/template/spec/containers/0/name
+      value: coralogix-demo-zookeeper
+- target:
+    kind: Service
+    name: coralogix-demo-zookeeper
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@

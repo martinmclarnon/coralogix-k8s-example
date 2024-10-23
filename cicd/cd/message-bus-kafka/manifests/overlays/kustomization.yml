@@ -1,0 +1,54 @@
+resources:
+  - ../base/
+
+patches:
+
+# coralogix-demo-kafka
+- target:
+    kind: ConfigMap
+    name: coralogix-demo-kafka
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@
+    - op: replace
+      path: /data/KAFKA_BROKER_ID
+      value: "1"
+    - op: replace
+      path: /data/KAFKA_ZOOKEEPER_CONNECT
+      value: coralogix-demo-zookeeper:2181
+    - op: replace
+      path: /data/KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+      value: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+    - op: replace
+      path: /data/KAFKA_ADVERTISED_LISTENERS
+      value: PLAINTEXT://:29092,PLAINTEXT_INTERNAL://@KAFKA_BOOTSTRAP_SERVERS@
+    - op: replace
+      path: /data/KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+      value: "1"
+    - op: replace
+      path: /data/KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+      value: "1"
+    - op: replace
+      path: /data/KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+      value: "1"
+- target:
+    kind: Deployment
+    name: coralogix-demo-kafka
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@
+    - op: replace
+      path: /spec/template/spec/containers/0/image
+      value: "confluentinc/cp-kafka:7.0.1"
+    - op: replace
+      path: /spec/template/spec/containers/0/name
+      value: coralogix-demo-kafka
+- target:
+    kind: Service
+    name: coralogix-demo-kafka
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@

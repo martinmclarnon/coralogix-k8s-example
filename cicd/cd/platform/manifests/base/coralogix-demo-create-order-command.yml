@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coralogix-demo-create-order-command
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+data:
+  KAFKA_BOOTSTRAP_SERVERS: "OVERLOADED_DURING_KUSTOMIZATION"
+  SERVER_SSL_ENABLED: "OVERLOADED_DURING_KUSTOMIZATION"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coralogix-demo-create-order-command
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+  labels:
+    app: coralogix-demo-create-order-command
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coralogix-demo-create-order-command
+  template:
+    metadata:
+      labels:
+        app: coralogix-demo-create-order-command
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: type
+                    operator: In
+                    values:
+                      - api
+      containers:
+        - name: OVERLOADED_DURING_KUSTOMIZATION
+          image: OVERLOADED_DURING_KUSTOMIZATION
+          ports:
+            - containerPort: 8088
+          resources:
+            limits:
+              cpu: 200m # 1 CPU core = 1000m
+              memory: 768Mi # 256 megabytes, 512 megabytes, 768 megabytes, 1024 megabytes
+            requests:
+              cpu: 100m # 0.75 CPU cores = 750m
+              memory: 256Mi # 256 megabytes, 512 megabytes, 768 megabytes, 1024 megabytes
+          env:
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: coralogix-demo-create-order-command
+                  key: KAFKA_BOOTSTRAP_SERVERS
+            - name: SERVER_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: coralogix-demo-create-order-command
+                  key: SERVER_SSL_ENABLED
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coralogix-demo-create-order-command
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+spec:
+  selector:
+    app: coralogix-demo-create-order-command
+  ports:
+    - protocol: TCP
+      port: 8088
+      targetPort: 8088
+  type: ClusterIP

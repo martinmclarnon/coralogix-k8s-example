@@ -1,0 +1,4 @@
+resources:
+  - coralogix-demo-nginx-ingress-resource.yml
+  - coralogix-demo-create-order-command.yml
+  - coralogix-demo-create-order-audit.yml

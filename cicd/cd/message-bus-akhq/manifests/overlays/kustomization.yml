@@ -1,0 +1,51 @@
+resources:
+  - ../base/
+
+patches:
+
+# coralogix-demo-akhq
+- target:
+    kind: ConfigMap
+    name: coralogix-demo-akhq
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@
+    - op: replace
+      path: /data/AKHQ_CONFIGS_GLOBAL_BOOTSTRAP_SERVERS
+      value: "@KAFKA_BOOTSTRAP_SERVERS@"
+    - op: replace
+      path: /data/AKHQ_CONFIGURATION
+      value: |
+                akhq:
+                  connections:
+                    docker-kafka-server:
+                      properties:
+                          bootstrap.servers: "@KAFKA_BOOTSTRAP_SERVERS@"
+- target:
+    kind: Deployment
+    name: coralogix-demo-akhq
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@
+    - op: replace
+      path: /spec/template/spec/containers/0/image
+      value: "tchiotludo/akhq:latest"
+    - op: replace
+      path: /spec/template/spec/containers/0/name
+      value: coralogix-demo-akhq
+- target:
+    kind: Service
+    name: coralogix-demo-akhq
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@
+- target:
+    kind: Service
+    name: coralogix-demo-akhq-external
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: @DEPLOY_TO_NAMESPACE@

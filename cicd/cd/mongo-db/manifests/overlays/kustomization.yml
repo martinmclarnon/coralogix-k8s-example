@@ -1,0 +1,38 @@
+resources:
+  - ../base/
+patches:
+  # coralogix-demo-mongodb
+  - target:
+      kind: ConfigMap
+      name: coralogix-demo-mongodb
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+  - target:
+      kind: Deployment
+      name: coralogix-demo-mongodb
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "mongo:6.0.6"
+      - op: replace
+        path: /spec/template/spec/containers/0/name
+        value: coralogix-demo-mongodb
+  - target:
+      kind: Service
+      name: coralogix-demo-mongodb
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+  - target:
+      kind: Service
+      name: coralogix-demo-mongodb-external
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@

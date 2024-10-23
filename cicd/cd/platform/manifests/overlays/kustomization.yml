@@ -1,0 +1,102 @@
+resources:
+  - ../base/
+patches:
+# coralogix-demo-create-order-command
+  - target:
+      kind: Secret
+      name: coralogix-demo-create-order-command
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+  - target:
+      kind: ConfigMap
+      name: coralogix-demo-create-order-command
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+      - op: replace
+        path: /data/KAFKA_BOOTSTRAP_SERVERS
+        value: "@KAFKA_BOOTSTRAP_SERVERS@"
+  - target:
+      kind: Deployment
+      name: coralogix-demo-create-order-command
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "@CORALOGIX_DEMO_ACR_ADDRESS@/@CORALOGIX_DEMO_CREATE_ORDER_COMMAND_IMAGE_NAME@:@TAG@"
+      - op: replace
+        path: /spec/template/spec/containers/0/name
+        value: coralogix-demo-create-order-command
+  - target:
+      kind: Service
+      name: coralogix-demo-create-order-command
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+# coralogix-demo-create-order-audit
+  - target:
+      kind: ConfigMap
+      name: coralogix-demo-create-order-audit
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+      - op: replace
+        path: /data/KAFKA_BOOTSTRAP_SERVERS
+        value: "@KAFKA_BOOTSTRAP_SERVERS@"
+      - op: replace
+        path: /data/SPRING_DATA_MONGODB_URI
+        value: "@SPRING_DATA_MONGODB_URI@"
+      - op: replace
+        path: /data/SPRING_DATA_MONGODB_DATABASE
+        value: "@SPRING_DATA_MONGODB_DATABASE@"
+  - target:
+      kind: Deployment
+      name: coralogix-demo-create-order-audit
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "@CORALOGIX_DEMO_ACR_ADDRESS@/@CORALOGIX_DEMO_CREATE_ORDER_AUDIT_IMAGE_NAME@:@TAG@"
+      - op: replace
+        path: /spec/template/spec/containers/0/name
+        value: coralogix-demo-create-order-audit
+  - target:
+      kind: Service
+      name: coralogix-demo-create-order-audit
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+# ngnix-ingress-resource
+  - target:
+      kind: Ingress
+      name: coralogix-demo-ingress
+    patch: |-
+      - op: replace
+        path: /metadata/namespace
+        value: @DEPLOY_TO_NAMESPACE@
+      - op: replace
+        path: /spec/rules/0/host
+        value: @NGNIX_INGRESS_RESOURCE_HOST@
+      - op: replace
+        path: /spec/rules/0/http/paths/0/path
+        value: /wy6lr1lqj4fc6nqel99s
+      - op: replace
+        path: /spec/rules/0/http/paths/0/pathType
+        value: Prefix
+      - op: replace
+        path: /spec/rules/0/http/paths/0/backend/service/name
+        value: coralogix-demo-create-order-command
+      - op: replace
+        path: /spec/rules/0/http/paths/0/backend/service/port/number
+        value: 8084
+ 

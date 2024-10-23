@@ -1,0 +1,237 @@
+# Build and push image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+# build-push-deploy.yml
+
+trigger:
+  - development
+resources:
+  - repo: self
+variables:
+  - group: below-the-line
+  - group: deploy-coralogix-demo-development
+  - group: coralogix-demo-platform
+stages:
+  - stage: Build
+    displayName: Build, Push, Deploy
+    jobs:
+      - job: Build
+        displayName: Build, Push, Deploy
+        pool:
+          vmImage: $(VMIMAGENAME)
+        steps:
+          # coralogix-demo mongodb
+          - task: Docker@2
+            displayName: coralogix-demo-mongodb build and push image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(CORALOGIX_DEMO_MONGODB_IMAGE_NAME)
+              dockerfile: $(CORALOGIX_DEMO_MONGODB_DOCKER_FILE_PATH)
+              containerRegistry: $(ACR_SERVICE_CONNECTION)
+              TAGs: |
+                $(TAG)
+          # coralogix-demo-create-order-command
+          - task: Docker@2
+            displayName: coralogix-demo-create-order-command build and push image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(CORALOGIX_DEMO_CREATE_ORDER_COMMAND_IMAGE_NAME)
+              dockerfile: $(CORALOGIX_DEMO_CREATE_ORDER_COMMAND_DOCKER_FILE_PATH)
+              containerRegistry: $(ACR_SERVICE_CONNECTION)
+              TAGs: |
+                $(TAG)
+          # coralogix-demo-create-order-audit
+          - task: Docker@2
+            displayName: coralogix-demo-create-order-audit build and push image to container registry
+            inputs:
+              command: buildAndPush
+              repository: $(CORALOGIX_DEMO_CREATE_ORDER_AUDIT_IMAGE_NAME)
+              dockerfile: $(CORALOGIX_DEMO_CREATE_ORDER_AUDIT_DOCKER_FILE_PATH)
+              containerRegistry: $(ACR_SERVICE_CONNECTION)
+              TAGs: |
+                $(TAG)
+          # Set Variables in Kustomization file for Mongo DB
+          - bash: |
+              sudo sed -i \
+                  -e 's~@DEPLOY_TO_NAMESPACE@~'"$(DEPLOY_TO_NAMESPACE)"'~g' \
+                  -e 's~@CORALOGIX_DEMO_ACR_ADDRESS@~'"$(CORALOGIX_DEMO_ACR_ADDRESS)"'~g' \
+                  -e 's~@CORALOGIX_DEMO_MONGODB_IMAGE_NAME@~'"$(CORALOGIX_DEMO_MONGODB_IMAGE_NAME)"'~g' \
+                  -e 's~@TAG@~'"$(TAG)"'~g' \
+                  kustomization.yml
+              cat kustomization.yml
+            workingDirectory: $(Build.SourcesDirectory)/cicd/cd/mongo-db/manifests/overlays/
+            displayName: 'Set Variables in Kustomization file for Mongo DB'
+          # Set Variables in Kustomization file for Message-Bus Zookeeper
+          - bash: |
+              sudo sed -i \
+                  -e 's~@DEPLOY_TO_NAMESPACE@~'"$(DEPLOY_TO_NAMESPACE)"'~g' \
+                  -e 's~@KAFKA_BOOTSTRAP_SERVERS@~'"$(KAFKA_BOOTSTRAP_SERVERS)"'~g' \
+                  kustomization.yml
+              cat kustomization.yml
+            workingDirectory: $(Build.SourcesDirectory)/cicd/cd/message-bus-zookeeper/manifests/overlays/
+            displayName: 'Set Variables in Kustomization file for Message Bus Zookeeper'
+          # Set Variables in Kustomization file for Message-Bus Kafka
+          - bash: |
+              sudo sed -i \
+                  -e 's~@DEPLOY_TO_NAMESPACE@~'"$(DEPLOY_TO_NAMESPACE)"'~g' \
+                  -e 's~@KAFKA_BOOTSTRAP_SERVERS@~'"$(KAFKA_BOOTSTRAP_SERVERS)"'~g' \
+                  kustomization.yml
+              cat kustomization.yml
+            workingDirectory: $(Build.SourcesDirectory)/cicd/cd/message-bus-kafka/manifests/overlays/
+            displayName: 'Set Variables in Kustomization file for Message Bus Kafka'
+          # Set Variables in Kustomization file for Message-Bus AKHQ
+          - bash: |
+              sudo sed -i \
+                  -e 's~@DEPLOY_TO_NAMESPACE@~'"$(DEPLOY_TO_NAMESPACE)"'~g' \
+                  -e 's~@KAFKA_BOOTSTRAP_SERVERS@~'"$(KAFKA_BOOTSTRAP_SERVERS)"'~g' \
+                  kustomization.yml
+              cat kustomization.yml
+            workingDirectory: $(Build.SourcesDirectory)/cicd/cd/message-bus-akhq/manifests/overlays/
+            displayName: 'Set Variables in Kustomization file for Message Bus AKHQ'          
+          # Set Variables in Kustomization file for Platform
+          - bash: |
+              sudo sed -i \
+                  -e 's~@DEPLOY_TO_NAMESPACE@~'"$(DEPLOY_TO_NAMESPACE)"'~g' \
+                  -e 's~@CORALOGIX_DEMO_ACR_ADDRESS@~'"$(CORALOGIX_DEMO_ACR_ADDRESS)"'~g' \
+                  -e 's~@CORALOGIX_DEMO_CREATE_ORDER_COMMAND_IMAGE_NAME@~'"$(CORALOGIX_DEMO_CREATE_ORDER_COMMAND_IMAGE_NAME)"'~g' \
+                  -e 's~@CORALOGIX_DEMO_CREATE_ORDER_AUDIT_IMAGE_NAME@~'"$(CORALOGIX_DEMO_CREATE_ORDER_AUDIT_IMAGE_NAME)"'~g' \
+                  -e 's~@NGNIX_INGRESS_RESOURCE_HOST@~'"$(NGNIX_INGRESS_RESOURCE_HOST)"'~g' \
+                  -e 's~@KAFKA_BOOTSTRAP_SERVERS@~'"$(KAFKA_BOOTSTRAP_SERVERS)"'~g' \
+                  -e 's~@SPRING_DATA_MONGODB_URI@~'"$(SPRING_DATA_MONGODB_URI)"'~g' \
+                  -e 's~@SPRING_DATA_MONGODB_DATABASE@~'"$(SPRING_DATA_MONGODB_DATABASE)"'~g' \
+                  -e 's~@TAG@~'"$(TAG)"'~g' \
+                  kustomization.yml
+              cat kustomization.yml
+            workingDirectory: $(Build.SourcesDirectory)/cicd/cd/platform/manifests/overlays/
+            displayName: 'Set Variables in Kustomization file for Platform'
+          # Delete existing deployments
+          - task: Kubernetes@1
+            displayName: 'Delete deployments'
+            inputs:
+              kubernetesServiceEndpoint: '$(KUBERNETES_SERVICE_CONNECTION)'
+              command: delete
+              arguments: 'deployment --all --namespace=$(DEPLOY_TO_NAMESPACE)'
+          # Bake Manifests
+          - task: KubernetesManifest@1
+            displayName: 'Bake MongoDB Kustomize app Manifest Files'
+            name: bake_coralogix_demo_mongodb
+            inputs:
+              action: bake
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              renderType: kustomize
+              kustomizationPath: '$(Build.SourcesDirectory)/cicd/cd/mongo-db/manifests/overlays/'
+          # Deploy
+          - task: KubernetesManifest@1
+            displayName: 'Deploy Mongo DB Kustomized Manifest File to Kubernetes cluster'
+            inputs:
+              kubernetesServiceConnection: '$(KUBERNETES_SERVICE_CONNECTION)'
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              manifests: '$(bake_coralogix_demo_mongodb.manifestsBundle)'
+              containers: |
+                $(CORALOGIX_DEMO_MONGODB_IMAGE_NAME):$(TAG)
+              imagePullSecrets: '$(IMAGE_PULL_SECRET)'
+          # Delay Task Execution
+          - bash: |
+              # Delay in seconds
+              DELAY_IN_SECONDS=20
+              echo "Delaying the task for $DELAY_SECONDS seconds..."
+              sleep $DELAY_SECONDS
+              echo "Resuming the pipeline..."
+            displayName: 'Delay Task Execution'
+          # Bake Manifests
+          - task: KubernetesManifest@1
+            displayName: 'Bake Message Bus Zookeeper Kustomize app Manifest Files'
+            name: bake_coralogix_demo_message_bus_zookeeper
+            inputs:
+              action: bake
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              renderType: kustomize
+              kustomizationPath: '$(Build.SourcesDirectory)/cicd/cd/message-bus-zookeeper/manifests/overlays'
+          # Deploy
+          - task: KubernetesManifest@1
+            displayName: 'Deploy Message Bus Zookeeper Kustomized Manifest File to Kubernetes cluster'
+            inputs:
+              kubernetesServiceConnection: '$(KUBERNETES_SERVICE_CONNECTION)'
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              manifests: '$(bake_coralogix_demo_message_bus_zookeeper.manifestsBundle)'
+              containers: ""
+              imagePullSecrets: '$(IMAGE_PULL_SECRET)'
+          # Delay Task Execution
+          - bash: |
+              # Delay in seconds
+              DELAY_IN_SECONDS=20
+              echo "Delaying the task for $DELAY_SECONDS seconds..."
+              sleep $DELAY_SECONDS
+              echo "Resuming the pipeline..."
+            displayName: 'Delay Task Execution'
+          # Bake Manifests
+          - task: KubernetesManifest@1
+            displayName: 'Bake Message Bus Kafka Kustomize app Manifest Files'
+            name: bake_coralogix_demo_message_bus_kafka
+            inputs:
+              action: bake
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              renderType: kustomize
+              kustomizationPath: '$(Build.SourcesDirectory)/cicd/cd/message-bus-kafka/manifests/overlays'
+          # Deploy
+          - task: KubernetesManifest@1
+            displayName: 'Deploy Message Bus Kafka Kustomized Manifest File to Kubernetes cluster'
+            inputs:
+              kubernetesServiceConnection: '$(KUBERNETES_SERVICE_CONNECTION)'
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              manifests: '$(bake_coralogix_demo_message_bus_kafka.manifestsBundle)'
+              containers: ""
+              imagePullSecrets: '$(IMAGE_PULL_SECRET)'
+          # Delay Task Execution
+          - bash: |
+              # Delay in seconds
+              DELAY_IN_SECONDS=20
+              echo "Delaying the task for $DELAY_SECONDS seconds..."
+              sleep $DELAY_SECONDS
+              echo "Resuming the pipeline..."
+            displayName: 'Delay Task Execution'
+          # Bake Manifests
+          - task: KubernetesManifest@1
+            displayName: 'Bake Message Bus AKHQ Kustomize app Manifest Files'
+            name: bake_coralogix_demo_message_bus_akhq
+            inputs:
+              action: bake
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              renderType: kustomize
+              kustomizationPath: '$(Build.SourcesDirectory)/cicd/cd/message-bus-akhq/manifests/overlays'
+          # Deploy
+          - task: KubernetesManifest@1
+            displayName: 'Deploy Message Bus AKHQ Kustomized Manifest File to Kubernetes cluster'
+            inputs:
+              kubernetesServiceConnection: '$(KUBERNETES_SERVICE_CONNECTION)'
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              manifests: '$(bake_coralogix_demo_message_bus_akhq.manifestsBundle)'
+              containers: ""
+              imagePullSecrets: '$(IMAGE_PULL_SECRET)'
+          # Delay Task Execution
+          - bash: |
+              # Delay in seconds
+              DELAY_IN_SECONDS=20
+              echo "Delaying the task for $DELAY_SECONDS seconds..."
+              sleep $DELAY_SECONDS
+              echo "Resuming the pipeline..."
+            displayName: 'Delay Task Execution'
+          # Bake Manifests
+          - task: KubernetesManifest@1
+            displayName: 'Bake Platform Kustomize app Manifest Files'
+            name: bake_coralogix_demo_platform
+            inputs:
+              action: bake
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              renderType: kustomize
+              kustomizationPath: '$(Build.SourcesDirectory)/cicd/cd/platform/manifests/overlays'
+          # Deploy
+          - task: KubernetesManifest@1
+            displayName: 'Deploy Platform Kustomized Manifest File to Kubernetes cluster'
+            inputs:
+              kubernetesServiceConnection: '$(KUBERNETES_SERVICE_CONNECTION)'
+              namespace: '$(DEPLOY_TO_NAMESPACE)'
+              manifests: '$(bake_coralogix_demo_platform.manifestsBundle)'
+              containers: |
+                $(CORALOGIX_DEMO_CREATE_ORDER_COMMAND_IMAGE_NAME):$(TAG)
+                $(CORALOGIX_DEMO_CREATE_ORDER_AUDIT_IMAGE_NAME):$(TAG)
+              imagePullSecrets: '$(IMAGE_PULL_SECRET)'

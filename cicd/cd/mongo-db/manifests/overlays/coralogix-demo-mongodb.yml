@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coralogix-demo-mongodb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coralogix-demo-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coralogix-demo-mongodb
+  template:
+    metadata:
+      labels:
+        app: coralogix-demo-mongodb
+    spec:
+      containers:
+        - name: OVERLOADED_DURING_KUSTOMIZATION
+          ports:
+            - containerPort: 27017
+          envFrom:
+            - configMapRef:
+                name: coralogix-demo-mongodb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coralogix-demo-mongodb
+spec:
+  selector:
+    app: coralogix-demo-mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coralogix-demo-mongodb-external
+  namespace: OVERLOADED_DURING_KUSTOMIZATION
+spec:
+  selector:
+    app: coralogix-demo-mongodb
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+  type: LoadBalancer

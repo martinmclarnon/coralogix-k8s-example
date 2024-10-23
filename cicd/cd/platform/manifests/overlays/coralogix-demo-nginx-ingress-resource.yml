@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: coralogix-demo-development-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: OVERLOADED_DURING_KUSTOMIZATION
+      http:
+        paths:
+          - path: /OVERLOADED_DURING_KUSTOMIZATION
+            pathType: Prefix
+            backend:
+              service:
+                name: OVERLOADED_DURING_KUSTOMIZATION
+                port:
+                  number: 0
